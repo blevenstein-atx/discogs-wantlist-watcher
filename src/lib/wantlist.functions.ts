@@ -36,8 +36,12 @@ export const refreshWantlist = createServerFn({ method: "POST" }).handler(async 
     const { data: existing } = await db.from("wantlist_status").select("release_id, num_for_sale");
     const prevMap = new Map((existing ?? []).map((r) => [Number(r.release_id), r.num_for_sale]));
 
-    for (const w of wants) {
+    await db.from("refresh_runs").update({ total: wants.length }).eq("id", run.id);
+
+    for (let i = 0; i < wants.length; i++) {
+      const w = wants[i];
       await sleep(1000);
+
       const releaseId = Number(w.id);
       const bi = w.basic_information ?? {};
       try {
@@ -61,7 +65,9 @@ export const refreshWantlist = createServerFn({ method: "POST" }).handler(async 
       } catch {
         errorCount++;
       }
+      await db.from("refresh_runs").update({ checked: i + 1 }).eq("id", run.id);
     }
+
 
     const keep = new Set(wants.map((w) => Number(w.id)));
     const stale = [...prevMap.keys()].filter((id) => !keep.has(id));
