@@ -14,7 +14,69 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      refresh_runs: {
+        Row: {
+          completed_at: string | null
+          error_count: number
+          id: string
+          started_at: string
+          status: string
+        }
+        Insert: {
+          completed_at?: string | null
+          error_count?: number
+          id?: string
+          started_at?: string
+          status?: string
+        }
+        Update: {
+          completed_at?: string | null
+          error_count?: number
+          id?: string
+          started_at?: string
+          status?: string
+        }
+        Relationships: []
+      }
+      wantlist_status: {
+        Row: {
+          artist: string | null
+          change_status: string
+          format: string | null
+          num_for_sale: number
+          prev_num_for_sale: number | null
+          refreshed_at: string
+          release_id: number
+          thumb_url: string | null
+          title: string | null
+          year: number | null
+        }
+        Insert: {
+          artist?: string | null
+          change_status?: string
+          format?: string | null
+          num_for_sale?: number
+          prev_num_for_sale?: number | null
+          refreshed_at?: string
+          release_id: number
+          thumb_url?: string | null
+          title?: string | null
+          year?: number | null
+        }
+        Update: {
+          artist?: string | null
+          change_status?: string
+          format?: string | null
+          num_for_sale?: number
+          prev_num_for_sale?: number | null
+          refreshed_at?: string
+          release_id?: number
+          thumb_url?: string | null
+          title?: string | null
+          year?: number | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
