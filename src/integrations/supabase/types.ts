@@ -16,25 +16,31 @@ export type Database = {
     Tables: {
       refresh_runs: {
         Row: {
+          checked: number
           completed_at: string | null
           error_count: number
           id: string
           started_at: string
           status: string
+          total: number | null
         }
         Insert: {
+          checked?: number
           completed_at?: string | null
           error_count?: number
           id?: string
           started_at?: string
           status?: string
+          total?: number | null
         }
         Update: {
+          checked?: number
           completed_at?: string | null
           error_count?: number
           id?: string
           started_at?: string
           status?: string
+          total?: number | null
         }
         Relationships: []
       }

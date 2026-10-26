@@ -8,6 +8,13 @@
       "when": 1793025693267,
       "tag": "0000_migration",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1793026115695,
+      "tag": "0001_add_refresh_progress_columns",
+      "breakpoints": true
     }
   ]
 }
