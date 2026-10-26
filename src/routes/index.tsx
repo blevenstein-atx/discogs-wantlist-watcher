@@ -10,9 +10,9 @@ import { sortRows, type SortKey } from "@/lib/wantlist-sort";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Wantlist Watcher — Discogs availability" },
+      { title: "Discogs Wantlist Watcher" },
       { name: "description", content: "See which Discogs wantlist items have copies for sale and what changed since last refresh." },
-      { property: "og:title", content: "Wantlist Watcher" },
+      { property: "og:title", content: "Discogs Wantlist Watcher" },
       { property: "og:description", content: "Discogs wantlist availability and changes at a glance." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -83,7 +83,7 @@ function Index() {
     <main className="mx-auto max-w-3xl px-4 py-10">
       <header className="mb-8 flex flex-wrap items-start justify-between gap-4 border-b pb-6">
         <div className="space-y-1">
-          <h1 className="font-display text-3xl font-bold tracking-tight">Wantlist Watcher</h1>
+          <h1 className="font-display text-3xl font-bold tracking-tight">Discogs Wantlist Watcher</h1>
           <p className="text-sm text-muted-foreground">Last refresh: {last ? fmt(last.completed_at) : "never"}</p>
           <p className="text-sm text-muted-foreground">
             {prev ? `Compared to: ${fmt(prev.completed_at)}` : "First refresh — baseline only"}
