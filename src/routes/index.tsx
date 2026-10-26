@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { refreshWantlist } from "@/lib/wantlist.functions";
 import { progressOf, type RunProgress } from "@/lib/wantlist-progress";
+import { sortRows, type SortKey } from "@/lib/wantlist-sort";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -42,6 +43,7 @@ function Index() {
   const [running, setRunning] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [changesOnly, setChangesOnly] = useState(false);
+  const [sort, setSort] = useState<SortKey>("artist");
   const [progress, setProgress] = useState<RunProgress>(() => progressOf(null));
 
   // While a refresh is running, ask the backend how far it has got.
@@ -73,10 +75,7 @@ function Index() {
   const available = rows.filter((r) => r.num_for_sale > 0);
   const nowAvail = rows.filter((r) => r.change_status === "now_available");
   const gone = rows.filter((r) => r.change_status === "no_longer_available");
-  const sorted = [...available].sort((a, b) => {
-    const an = a.change_status === "now_available" ? 0 : 1, bn = b.change_status === "now_available" ? 0 : 1;
-    return an - bn || (a.artist ?? "").localeCompare(b.artist ?? "");
-  });
+  const sorted = sortRows(available, sort);
   const main = changesOnly ? sorted.filter((r) => r.change_status === "now_available") : sorted;
   const [last, prev] = data?.runs ?? [];
 
@@ -90,7 +89,7 @@ function Index() {
             {prev ? `Compared to: ${fmt(prev.completed_at)}` : "First refresh — baseline only"}
           </p>
           <p className="pt-1 text-sm font-medium">
-            {available.length} of {rows.length} wants available · {nowAvail.length} now available · {gone.length} no longer available
+            {available.length} of {rows.length} wants available · {nowAvail.length} newly available · {gone.length} no longer available
           </p>
         </div>
         <div className="flex flex-col items-end gap-3">
@@ -98,10 +97,21 @@ function Index() {
             className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:opacity-60">
             {running ? "Refreshing…" : "Refresh"}
           </button>
-          <label className="flex cursor-pointer items-center gap-2 text-sm">
-            <input type="checkbox" checked={changesOnly} onChange={(e) => setChangesOnly(e.target.checked)} className="accent-primary" />
-            Changes only
-          </label>
+          <div className="flex flex-col items-end gap-2 text-sm">
+            <label className="flex items-center gap-2">
+              Sort
+              <select value={sort} onChange={(e) => setSort(e.target.value as SortKey)}
+                className="rounded-md border bg-background px-2 py-1 text-sm">
+                <option value="artist">Artist name</option>
+                <option value="title">Album title</option>
+                <option value="year">Release year</option>
+              </select>
+            </label>
+            <label className="flex cursor-pointer items-center gap-2">
+              <input type="checkbox" checked={changesOnly} onChange={(e) => setChangesOnly(e.target.checked)} className="accent-primary" />
+              Changes only
+            </label>
+          </div>
         </div>
       </header>
 
@@ -163,7 +173,7 @@ function Item({ r }: { r: Row }) {
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <p className="truncate font-semibold">{r.artist}</p>
-            {r.change_status === "now_available" && <span className="rounded-full bg-primary px-2 py-0.5 text-xs font-semibold text-primary-foreground">Now available</span>}
+            {r.change_status === "now_available" && <span className="rounded-full bg-primary px-2 py-0.5 text-xs font-semibold text-primary-foreground">Newly available</span>}
           </div>
           <p className="truncate text-sm">{r.title}</p>
           <p className="truncate text-xs text-muted-foreground">{[r.format, r.year].filter(Boolean).join(" · ")}</p>
