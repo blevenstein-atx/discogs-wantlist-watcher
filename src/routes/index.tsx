@@ -1,9 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { refreshWantlist } from "@/lib/wantlist.functions";
+import { progressOf, type RunProgress } from "@/lib/wantlist-progress";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -41,9 +42,29 @@ function Index() {
   const [running, setRunning] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [changesOnly, setChangesOnly] = useState(false);
+  const [progress, setProgress] = useState<RunProgress>(() => progressOf(null));
+
+  // While a refresh is running, ask the backend how far it has got.
+  useEffect(() => {
+    if (!running) return;
+    let stop = false;
+    const tick = async () => {
+      const { data: run } = await supabase
+        .from("refresh_runs")
+        .select("total, checked")
+        .eq("status", "running")
+        .order("started_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (!stop) setProgress(progressOf(run));
+    };
+    tick();
+    const id = setInterval(tick, 1500);
+    return () => { stop = true; clearInterval(id); };
+  }, [running]);
 
   const onRefresh = async () => {
-    setRunning(true); setErr(null);
+    setRunning(true); setErr(null); setProgress(progressOf(null));
     try { await refresh(); } catch (e) { setErr(e instanceof Error ? e.message : "Refresh failed"); }
     finally { setRunning(false); qc.invalidateQueries({ queryKey: ["wantlist"] }); }
   };
@@ -75,7 +96,7 @@ function Index() {
         <div className="flex flex-col items-end gap-3">
           <button onClick={onRefresh} disabled={running}
             className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:opacity-60">
-            {running ? "Refreshing… (≈1s per item)" : "Refresh"}
+            {running ? "Refreshing…" : "Refresh"}
           </button>
           <label className="flex cursor-pointer items-center gap-2 text-sm">
             <input type="checkbox" checked={changesOnly} onChange={(e) => setChangesOnly(e.target.checked)} className="accent-primary" />
@@ -84,6 +105,7 @@ function Index() {
         </div>
       </header>
 
+      {running && <RefreshProgress progress={progress} />}
       {err && <p className="mb-4 rounded-md bg-destructive/10 p-3 text-sm text-destructive">{err}</p>}
       {isLoading ? <p className="text-muted-foreground">Loading…</p> : (
         <>
@@ -101,6 +123,33 @@ function Index() {
         </>
       )}
     </main>
+  );
+}
+
+function RefreshProgress({ progress }: { progress: RunProgress }) {
+  const { phase, done, total, percent } = progress;
+  return (
+    <div className="mb-8 flex items-center gap-5 rounded-lg border bg-card p-5" role="status" aria-live="polite">
+      <div className="vinyl relative h-20 w-20 shrink-0">
+        <div className="vinyl-label absolute left-1/2 top-1/2 h-7 w-7 -translate-x-1/2 -translate-y-1/2 rounded-full" />
+        <div className="absolute left-1/2 top-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-background" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="font-display text-lg font-semibold">
+          {phase === "checking" ? `Checking ${done} of ${total}` : "Reading your wantlist…"}
+        </p>
+        <p className="text-sm text-muted-foreground">
+          {phase === "checking" ? "About one item per second — keep this tab open." : "Counting your wants first."}
+        </p>
+        {percent === null ? (
+          <div className="progress-sweep mt-3 h-1.5 w-full rounded-full bg-muted" />
+        ) : (
+          <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+            <div className="h-full rounded-full bg-primary transition-[width] duration-700 ease-out" style={{ width: `${percent}%` }} />
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
