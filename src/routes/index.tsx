@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { refreshWantlist } from "@/lib/wantlist.functions";
 import { progressOf, type RunProgress } from "@/lib/wantlist-progress";
-import { sortRows, type SortKey } from "@/lib/wantlist-sort";
+import { sortRows, type SortDirection, type SortKey } from "@/lib/wantlist-sort";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -44,6 +44,8 @@ function Index() {
   const [err, setErr] = useState<string | null>(null);
   const [changesOnly, setChangesOnly] = useState(false);
   const [sort, setSort] = useState<SortKey>("artist");
+  const [dir, setDir] = useState<SortDirection>("asc");
+
   const [progress, setProgress] = useState<RunProgress>(() => progressOf(null));
 
   // While a refresh is running, ask the backend how far it has got.
@@ -75,7 +77,7 @@ function Index() {
   const available = rows.filter((r) => r.num_for_sale > 0);
   const nowAvail = rows.filter((r) => r.change_status === "now_available");
   const gone = rows.filter((r) => r.change_status === "no_longer_available");
-  const sorted = sortRows(available, sort);
+  const sorted = sortRows(available, sort, dir);
   const main = changesOnly ? sorted.filter((r) => r.change_status === "now_available") : sorted;
   const [last, prev] = data?.runs ?? [];
 
@@ -107,6 +109,15 @@ function Index() {
                 <option value="year">Release year</option>
               </select>
             </label>
+            <label className="flex items-center gap-2">
+              Order
+              <select value={dir} onChange={(e) => setDir(e.target.value as SortDirection)}
+                className="rounded-md border bg-background px-2 py-1 text-sm">
+                <option value="asc">Ascending</option>
+                <option value="desc">Descending</option>
+              </select>
+            </label>
+
             <label className="flex cursor-pointer items-center gap-2">
               <input type="checkbox" checked={changesOnly} onChange={(e) => setChangesOnly(e.target.checked)} className="accent-primary" />
               Changes only
