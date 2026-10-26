@@ -8,3 +8,9 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+## Rules
+
+- Presentation-only logic (progress math, list ordering) lives in small browser-safe modules under `src/lib` with a matching vitest file in `src/test`, so it can be tested without a server; server functions keep only data fetching and stay free of display rules.
+- List ordering pins items that just became available above the rest, whatever field the user sorts by, so new finds are never buried.
+

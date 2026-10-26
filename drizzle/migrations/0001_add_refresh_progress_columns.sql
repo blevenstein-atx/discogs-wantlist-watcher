@@ -1,0 +1,1 @@
+ALTER TABLE public.refresh_runs ADD COLUMN IF NOT EXISTS total integer, ADD COLUMN IF NOT EXISTS checked integer NOT NULL DEFAULT 0;

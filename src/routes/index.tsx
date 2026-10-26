@@ -1,9 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { refreshWantlist } from "@/lib/wantlist.functions";
+import { progressOf, type RunProgress } from "@/lib/wantlist-progress";
+import { sortRows, type SortKey } from "@/lib/wantlist-sort";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -41,9 +43,30 @@ function Index() {
   const [running, setRunning] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [changesOnly, setChangesOnly] = useState(false);
+  const [sort, setSort] = useState<SortKey>("artist");
+  const [progress, setProgress] = useState<RunProgress>(() => progressOf(null));
+
+  // While a refresh is running, ask the backend how far it has got.
+  useEffect(() => {
+    if (!running) return;
+    let stop = false;
+    const tick = async () => {
+      const { data: run } = await supabase
+        .from("refresh_runs")
+        .select("total, checked")
+        .eq("status", "running")
+        .order("started_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (!stop) setProgress(progressOf(run));
+    };
+    tick();
+    const id = setInterval(tick, 1500);
+    return () => { stop = true; clearInterval(id); };
+  }, [running]);
 
   const onRefresh = async () => {
-    setRunning(true); setErr(null);
+    setRunning(true); setErr(null); setProgress(progressOf(null));
     try { await refresh(); } catch (e) { setErr(e instanceof Error ? e.message : "Refresh failed"); }
     finally { setRunning(false); qc.invalidateQueries({ queryKey: ["wantlist"] }); }
   };
@@ -52,10 +75,7 @@ function Index() {
   const available = rows.filter((r) => r.num_for_sale > 0);
   const nowAvail = rows.filter((r) => r.change_status === "now_available");
   const gone = rows.filter((r) => r.change_status === "no_longer_available");
-  const sorted = [...available].sort((a, b) => {
-    const an = a.change_status === "now_available" ? 0 : 1, bn = b.change_status === "now_available" ? 0 : 1;
-    return an - bn || (a.artist ?? "").localeCompare(b.artist ?? "");
-  });
+  const sorted = sortRows(available, sort);
   const main = changesOnly ? sorted.filter((r) => r.change_status === "now_available") : sorted;
   const [last, prev] = data?.runs ?? [];
 
@@ -69,21 +89,33 @@ function Index() {
             {prev ? `Compared to: ${fmt(prev.completed_at)}` : "First refresh — baseline only"}
           </p>
           <p className="pt-1 text-sm font-medium">
-            {available.length} of {rows.length} wants available · {nowAvail.length} now available · {gone.length} no longer available
+            {available.length} of {rows.length} wants available · {nowAvail.length} newly available · {gone.length} no longer available
           </p>
         </div>
         <div className="flex flex-col items-end gap-3">
           <button onClick={onRefresh} disabled={running}
             className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:opacity-60">
-            {running ? "Refreshing… (≈1s per item)" : "Refresh"}
+            {running ? "Refreshing…" : "Refresh"}
           </button>
-          <label className="flex cursor-pointer items-center gap-2 text-sm">
-            <input type="checkbox" checked={changesOnly} onChange={(e) => setChangesOnly(e.target.checked)} className="accent-primary" />
-            Changes only
-          </label>
+          <div className="flex flex-col items-end gap-2 text-sm">
+            <label className="flex items-center gap-2">
+              Sort
+              <select value={sort} onChange={(e) => setSort(e.target.value as SortKey)}
+                className="rounded-md border bg-background px-2 py-1 text-sm">
+                <option value="artist">Artist name</option>
+                <option value="title">Album title</option>
+                <option value="year">Release year</option>
+              </select>
+            </label>
+            <label className="flex cursor-pointer items-center gap-2">
+              <input type="checkbox" checked={changesOnly} onChange={(e) => setChangesOnly(e.target.checked)} className="accent-primary" />
+              Changes only
+            </label>
+          </div>
         </div>
       </header>
 
+      {running && <RefreshProgress progress={progress} />}
       {err && <p className="mb-4 rounded-md bg-destructive/10 p-3 text-sm text-destructive">{err}</p>}
       {isLoading ? <p className="text-muted-foreground">Loading…</p> : (
         <>
@@ -104,6 +136,33 @@ function Index() {
   );
 }
 
+function RefreshProgress({ progress }: { progress: RunProgress }) {
+  const { phase, done, total, percent } = progress;
+  return (
+    <div className="mb-8 flex items-center gap-5 rounded-lg border bg-card p-5" role="status" aria-live="polite">
+      <div className="vinyl relative h-20 w-20 shrink-0">
+        <div className="vinyl-label absolute left-1/2 top-1/2 h-7 w-7 -translate-x-1/2 -translate-y-1/2 rounded-full" />
+        <div className="absolute left-1/2 top-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-background" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="font-display text-lg font-semibold">
+          {phase === "checking" ? `Checking ${done} of ${total}` : "Reading your wantlist…"}
+        </p>
+        <p className="text-sm text-muted-foreground">
+          {phase === "checking" ? "About one item per second — keep this tab open." : "Counting your wants first."}
+        </p>
+        {percent === null ? (
+          <div className="progress-sweep mt-3 h-1.5 w-full rounded-full bg-muted" />
+        ) : (
+          <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+            <div className="h-full rounded-full bg-primary transition-[width] duration-700 ease-out" style={{ width: `${percent}%` }} />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function Item({ r }: { r: Row }) {
   return (
     <li>
@@ -114,7 +173,7 @@ function Item({ r }: { r: Row }) {
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <p className="truncate font-semibold">{r.artist}</p>
-            {r.change_status === "now_available" && <span className="rounded-full bg-primary px-2 py-0.5 text-xs font-semibold text-primary-foreground">Now available</span>}
+            {r.change_status === "now_available" && <span className="rounded-full bg-primary px-2 py-0.5 text-xs font-semibold text-primary-foreground">Newly available</span>}
           </div>
           <p className="truncate text-sm">{r.title}</p>
           <p className="truncate text-xs text-muted-foreground">{[r.format, r.year].filter(Boolean).join(" · ")}</p>

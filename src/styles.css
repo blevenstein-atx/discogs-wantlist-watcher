@@ -143,3 +143,58 @@
     color: var(--color-foreground);
   }
 }
+
+/* Refresh indicator: a spinning record with grooves, a coloured centre label,
+   and an indeterminate bar used while the wantlist size is still unknown. */
+@keyframes record-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes bar-sweep {
+  0% {
+    transform: translateX(-110%);
+  }
+  100% {
+    transform: translateX(260%);
+  }
+}
+
+.vinyl {
+  border-radius: 9999px;
+  background:
+    repeating-radial-gradient(circle at 50% 50%, transparent 0 1px, color-mix(in srgb, var(--muted-foreground) 26%, transparent) 1px 2px),
+    radial-gradient(circle at 50% 50%, var(--foreground) 0 36%, color-mix(in srgb, var(--foreground) 88%, var(--muted)) 36% 100%);
+  box-shadow: 0 8px 20px -10px color-mix(in srgb, var(--foreground) 60%, transparent);
+  animation: record-spin 3.2s linear infinite;
+}
+
+.vinyl-label {
+  background: var(--primary);
+}
+
+.progress-sweep {
+  position: relative;
+  overflow: hidden;
+}
+
+.progress-sweep::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 45%;
+  border-radius: 9999px;
+  background: var(--primary);
+  animation: bar-sweep 1.5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vinyl {
+    animation: none;
+  }
+  .progress-sweep::after {
+    animation: none;
+  }
+}
+
