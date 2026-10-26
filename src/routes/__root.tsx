@@ -78,10 +78,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Wantlist Watcher" },
+      { title: "Discogs Wantlist Watcher" },
       { name: "description", content: "Discogs wantlist availability tracker" },
       { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Wantlist Watcher" },
+      { property: "og:title", content: "Discogs Wantlist Watcher" },
       { property: "og:description", content: "Discogs wantlist availability tracker" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
