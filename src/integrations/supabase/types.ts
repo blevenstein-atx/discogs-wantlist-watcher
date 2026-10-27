@@ -20,6 +20,8 @@ export type Database = {
           completed_at: string | null
           error_count: number
           id: string
+          lease_expires_at: string | null
+          retry_at: string | null
           started_at: string
           status: string
           total: number | null
@@ -29,6 +31,8 @@ export type Database = {
           completed_at?: string | null
           error_count?: number
           id?: string
+          lease_expires_at?: string | null
+          retry_at?: string | null
           started_at?: string
           status?: string
           total?: number | null
@@ -38,6 +42,8 @@ export type Database = {
           completed_at?: string | null
           error_count?: number
           id?: string
+          lease_expires_at?: string | null
+          retry_at?: string | null
           started_at?: string
           status?: string
           total?: number | null
@@ -88,7 +94,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      acquire_wantlist_refresh: {
+        Args: never
+        Returns: {
+          outcome: string
+          retry_after: string
+          run_id: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

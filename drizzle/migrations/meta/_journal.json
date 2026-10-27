@@ -15,6 +15,13 @@
       "when": 1793026115695,
       "tag": "0001_add_refresh_progress_columns",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793135149397,
+      "tag": "0002_discogs_refresh_guard",
+      "breakpoints": true
     }
   ]
 }
