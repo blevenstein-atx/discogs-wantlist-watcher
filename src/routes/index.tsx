@@ -42,6 +42,7 @@ function Index() {
   const refresh = useServerFn(refreshWantlist);
   const [running, setRunning] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [retryAt, setRetryAt] = useState<string | null>(null);
   const [changesOnly, setChangesOnly] = useState(false);
   const [sort, setSort] = useState<SortKey>("artist");
   const [dir, setDir] = useState<SortDirection>("asc");
@@ -55,12 +56,12 @@ function Index() {
     const tick = async () => {
       const { data: run } = await supabase
         .from("refresh_runs")
-        .select("total, checked")
+        .select("total, checked, retry_at")
         .eq("status", "running")
         .order("started_at", { ascending: false })
         .limit(1)
         .maybeSingle();
-      if (!stop) setProgress(progressOf(run));
+      if (!stop) { setProgress(progressOf(run)); setRetryAt(run?.retry_at ?? null); }
     };
     tick();
     const id = setInterval(tick, 1500);
@@ -68,8 +69,12 @@ function Index() {
   }, [running]);
 
   const onRefresh = async () => {
-    setRunning(true); setErr(null); setProgress(progressOf(null));
-    try { await refresh(); } catch (e) { setErr(e instanceof Error ? e.message : "Refresh failed"); }
+    setRunning(true); setErr(null); setRetryAt(null); setProgress(progressOf(null));
+    try {
+      const result = await refresh();
+      if (!result.ok) { setErr(result.message); setRetryAt(result.retryAt); }
+      else setRetryAt(null);
+    } catch (e) { setErr(e instanceof Error ? e.message : "Refresh failed"); }
     finally { setRunning(false); qc.invalidateQueries({ queryKey: ["wantlist"] }); }
   };
 
@@ -127,6 +132,7 @@ function Index() {
       </header>
 
       {running && <RefreshProgress progress={progress} />}
+      {retryAt && <p className="mb-4 text-sm text-muted-foreground">Discogs cooldown until {fmt(retryAt)}.{running ? " Retrying automatically…" : " Please wait before refreshing again."}</p>}
       {err && <p className="mb-4 rounded-md bg-destructive/10 p-3 text-sm text-destructive">{err}</p>}
       {isLoading ? <p className="text-muted-foreground">Loading…</p> : (
         <>
