@@ -5,6 +5,12 @@ export type RunProgress = {
   percent: number | null;
 };
 
+export function cooldownOf(retryAt: string | null, now: number): number | null {
+  if (!retryAt) return null;
+  const remaining = Date.parse(retryAt) - now;
+  return Number.isFinite(remaining) ? Math.max(0, Math.ceil(remaining / 1000)) : null;
+}
+
 /**
  * Turns the running refresh row into something the UI can show.
  * Until the wantlist size is known the run is still "reading" its pages.
