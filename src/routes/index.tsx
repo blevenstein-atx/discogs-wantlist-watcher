@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { refreshWantlist } from "@/lib/wantlist.functions";
-import { progressOf, type RunProgress } from "@/lib/wantlist-progress";
+import { cooldownOf, progressOf, type RunProgress } from "@/lib/wantlist-progress";
 import { sortRows, type SortDirection, type SortKey } from "@/lib/wantlist-sort";
 
 export const Route = createFileRoute("/")({
@@ -131,8 +131,8 @@ function Index() {
         </div>
       </header>
 
-      {running && <RefreshProgress progress={progress} />}
-      {retryAt && <p className="mb-4 text-sm text-muted-foreground">Discogs cooldown until {fmt(retryAt)}.{running ? " Retrying automatically…" : " Please wait before refreshing again."}</p>}
+      {running && <RefreshProgress progress={progress} retryAt={retryAt} />}
+      {!running && retryAt && <p className="mb-4 text-sm text-muted-foreground">Discogs cooldown until {fmt(retryAt)}. Please wait before refreshing again.</p>}
       {err && <p className="mb-4 rounded-md bg-destructive/10 p-3 text-sm text-destructive">{err}</p>}
       {isLoading ? <p className="text-muted-foreground">Loading…</p> : (
         <>
@@ -153,8 +153,16 @@ function Index() {
   );
 }
 
-function RefreshProgress({ progress }: { progress: RunProgress }) {
+function RefreshProgress({ progress, retryAt }: { progress: RunProgress; retryAt: string | null }) {
   const { phase, done, total, percent } = progress;
+  const [now, setNow] = useState(0);
+  useEffect(() => {
+    setNow(Date.now());
+    if (!retryAt) return;
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [retryAt]);
+  const seconds = now ? cooldownOf(retryAt, now) : null;
   return (
     <div className="mb-8 flex items-center gap-5 rounded-lg border bg-card p-5" role="status" aria-live="polite">
       <div className="vinyl relative h-20 w-20 shrink-0">
@@ -163,12 +171,14 @@ function RefreshProgress({ progress }: { progress: RunProgress }) {
       </div>
       <div className="min-w-0 flex-1">
         <p className="font-display text-lg font-semibold">
-          {phase === "checking" ? `Checking ${done} of ${total}` : "Reading your wantlist…"}
+          {retryAt ? "Waiting for Discogs…" : phase === "checking" ? `Checking ${done} of ${total}` : "Reading your wantlist…"}
         </p>
         <p className="text-sm text-muted-foreground">
-          {phase === "checking" ? "About one item per second — keep this tab open." : "Counting your wants first."}
+          {retryAt
+            ? seconds === 0 ? "Retrying automatically…" : `Discogs has limited requests. ${seconds === null ? "Retrying shortly" : `Retrying in ${seconds} seconds`}…`
+            : phase === "checking" ? "About one item per second — keep this tab open." : "Counting your wants first."}
         </p>
-        {percent === null ? (
+        {retryAt ? <p className="mt-3 text-xs text-muted-foreground">Your previous results are kept. Cooldown until {fmt(retryAt)}.</p> : percent === null ? (
           <div className="progress-sweep mt-3 h-1.5 w-full rounded-full bg-muted" />
         ) : (
           <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-muted">
