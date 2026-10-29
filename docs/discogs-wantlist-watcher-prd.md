@@ -48,13 +48,16 @@ There is a single user (the owner). Visitors need no account — the wantlist st
 - **`wantlist_status`** — one row per want: release id, artist, title, format, year, thumbnail, current for-sale count, previous for-sale count, change status (`unchanged` / `now_available` / `no_longer_available`), and refreshed-at timestamp.
 - **`refresh_runs`** — audit of each refresh: started/completed timestamps, status, item total, items checked so far (drives the progress panel), and error count.
 - Data is stored in the project's backend (Lovable Cloud). Anonymous and authenticated users have read access; the wantlist being public is intentional.
-- The Discogs token and username are stored as private app secrets and are never exposed on the page.
+- Discogs connection credentials and the username are kept private and are never exposed on the page.
 
 ## 5. Refresh Behavior
 
 - On each refresh the app paginates the owner's wantlist (100 items per page), then fetches the marketplace listing count for each item individually.
 - Requests are paced at **~1 request per second** (Discogs allows 60/minute; there is no batch endpoint). A full refresh of ~86 wants takes roughly 90 seconds — accepted as-is for this POC.
 - Each refresh compares against the previous run to compute change status, upserts current rows, and deletes wants no longer on the wantlist.
+- All outbound Discogs requests, including pagination and retries, use Lovable's linked Discogs connection relay rather than direct requests from the web host.
+- A shared refresh lock prevents overlapping checks. Rate-limit responses trigger bounded retries and a visible cooldown countdown; future provider limits remain possible.
+- Fetched results are staged until every request succeeds, so a failed refresh preserves the previous snapshot. With relay overhead or cooldowns, a full refresh can take a few minutes.
 
 ## 6. Constraints & Decisions
 
@@ -68,5 +71,6 @@ There is a single user (the owner). Visitors need no account — the wantlist st
 - A visitor without an account sees the wantlist status page with available items, counts, and change sections.
 - Newly available items are badged and pinned at the top under any sort order.
 - Sorting by artist / title / year, ascending or descending, orders the list as specified.
-- Refreshing shows a live progress panel (record animation, "Checking N of M", progress bar) and completes within roughly 90 seconds for ~86 wants without hitting the Discogs rate limit.
+- Refreshing shows a live progress panel (record animation, "Checking N of M", progress bar), keeps conservative pacing, and displays a countdown during Discogs cooldowns rather than a misleading counting message.
+- Overlapping refreshes are blocked, all Discogs requests use the linked relay, and provider failures leave the previous results intact.
 - "Changes only" shows only items whose availability changed since the previous refresh.

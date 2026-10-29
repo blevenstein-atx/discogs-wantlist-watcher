@@ -21,8 +21,9 @@ No login is needed to view the page — the wantlist status is intentionally pub
 ## How it works
 
 - A backend (Lovable Cloud) stores the current status of each want (`wantlist_status`) and an audit of each refresh run (`refresh_runs`), which also drives the progress panel.
-- On refresh, the app paginates the wantlist, then checks the marketplace listing count for each item one at a time, pacing requests at ~1/second. A full refresh of ~86 wants takes roughly 90 seconds.
-- Discogs credentials are stored as private app secrets and are never exposed on the page.
+- On refresh, the app paginates the wantlist, then checks the marketplace listing count for each item one at a time, pacing requests at ~1/second. Requests go through Lovable's linked Discogs connection relay; a full refresh can take a few minutes.
+- A shared refresh lock prevents overlapping checks. Discogs rate limits trigger automatic cooldowns and bounded retries, with a countdown on the page; failed checks preserve the previous results.
+- Discogs connection credentials are kept private and are never exposed on the page.
 
 ## Build with Lovable
 
