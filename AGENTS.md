@@ -14,5 +14,6 @@
 - Presentation-only logic (progress math, list ordering) lives in small browser-safe modules under `src/lib` with a matching vitest file in `src/test`, so it can be tested without a server; server functions keep only data fetching and stay free of display rules.
 - List ordering pins items that just became available above the rest, whatever field the user sorts by, so new finds are never buried.
 - Discogs calls use the tested request helper for pacing and bounded 429 backoff; a service-only database RPC acquires a shared refresh lease so separate tabs and workers cannot overlap. Stage fetched rows until all requests succeed to preserve the previous snapshot on provider failures.
+- All Discogs requests, including pagination and retries, go through the linked Discogs connector gateway with server-only connection credentials; never fall back to direct provider requests, so the alternate outbound path remains consistent.
 - Refresh progress prioritizes persisted Discogs cooldown state over reading/checking labels, with countdown math in the tested browser-safe progress module.
 
