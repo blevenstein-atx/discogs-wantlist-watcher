@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { discogsRequester, DiscogsRateLimitError } from "./discogs-request";
+import { discogsGatewayFetcher } from "./discogs-gateway";
 
 export function computeChangeStatus(prev: number | null | undefined, current: number) {
   if (prev === null || prev === undefined) return "unchanged";
@@ -9,11 +10,12 @@ export function computeChangeStatus(prev: number | null | undefined, current: nu
 }
 
 export const refreshWantlist = createServerFn({ method: "POST" }).handler(async () => {
-  const token = process.env["DISCOGS_TOKEN"];
+  const apiKey = process.env["LOVABLE_API_KEY"];
+  const connectionKey = process.env["UDC_DISCOGS_API_KEY"];
   const username = process.env["DISCOGS_USERNAME"];
-  if (!token || !username) throw new Error("Discogs credentials are not configured");
+  if (!apiKey || !connectionKey || !username) throw new Error("Discogs connection is not configured");
   const { supabaseAdmin: db } = await import("@/integrations/supabase/client.server");
-  const headers = { Authorization: `Discogs token=${token}`, "User-Agent": "WantlistWatcher/0.1" };
+  const headers = { "User-Agent": "WantlistWatcher/0.1" };
 
   const { data: locks, error: lockError } = await db.rpc("acquire_wantlist_refresh");
   const lock = locks?.[0];
@@ -28,6 +30,7 @@ export const refreshWantlist = createServerFn({ method: "POST" }).handler(async 
   };
   const request = discogsRequester({
     headers,
+    fetcher: discogsGatewayFetcher({ apiKey, connectionKey }),
     onBackoff: async (retryAt, delay) => updateRun({ retry_at: retryAt, lease_expires_at: new Date(Date.now() + delay + 120_000).toISOString() }),
     onReady: async () => updateRun({ retry_at: null, lease_expires_at: new Date(Date.now() + 120_000).toISOString() }),
   });
