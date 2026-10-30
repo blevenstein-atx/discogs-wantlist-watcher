@@ -1,4 +1,4 @@
-export type SortKey = "artist" | "title" | "year";
+export type SortKey = "artist" | "title" | "year" | "copies";
 export type SortDirection = "asc" | "desc";
 
 type Sortable = {
@@ -6,6 +6,7 @@ type Sortable = {
   title: string | null;
   year: number | null;
   change_status: string;
+  num_for_sale?: number;
 };
 
 const str = (s: string | null) => (s ?? "").toLowerCase();
@@ -24,6 +25,11 @@ export function sortRows<T extends Sortable>(
   const dir = direction === "desc" ? -1 : 1;
   const pin = (r: T) => (r.change_status === "now_available" ? 0 : 1);
   const byField = (a: T, b: T) => {
+    if (key === "copies") {
+      const diff = (a.num_for_sale ?? 0) - (b.num_for_sale ?? 0);
+      if (diff !== 0) return dir * diff;
+      return str(a.artist).localeCompare(str(b.artist)) || str(a.title).localeCompare(str(b.title));
+    }
     if (key === "year") {
       const aUnknown = a.year === null;
       const bUnknown = b.year === null;
