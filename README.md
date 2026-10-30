@@ -4,12 +4,14 @@ A single-page web app that shows which items in a Discogs wantlist currently hav
 
 **Live app**: https://discogs-wantlist-watcher.lovable.app
 
+![Discogs Wantlist Watcher screenshot](docs/screenshot.png)
+
 ## What it does
 
 - **Available items only**: the main list shows only wants with copies currently for sale.
 - **Change tracking**: items that just became available are pinned at the top with a "Newly available" badge; items that dropped to zero copies are listed in a collapsible "No longer available" section.
 - **Changes only** toggle to filter down to just what changed since the last refresh.
-- **Sorting**: by Artist name (default), Album title, or Release year, each ascending or descending. Newly available items stay pinned regardless of sort.
+- **Sorting**: by Artist name (default), Album title, Release year, or Copies for sale, each ascending or descending. Newly available items stay pinned regardless of sort.
 - **Refresh progress**: refreshing re-checks the full wantlist at ~1 item per second (Discogs' rate limit), with a spinning-record progress panel showing live counts.
 
 No login is needed to view the page — the wantlist status is intentionally public. Read-only: the app never edits the wantlist.

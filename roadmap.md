@@ -8,6 +8,6 @@
 - [x] Show Discogs cooldown in the refresh panel instead of counting status
 - [x] Route all Discogs outbound requests through the linked connection relay; verified a full 86-item refresh through the app without errors, with existing pacing and safeguards retained.
 
-- [ ] Reconnect progress panel on page load if a refresh is running
-- [ ] README screenshot in docs/
-- [ ] Sort by copies for sale (ascending = fewest first)
+- [x] Reconnect progress panel on page load if a refresh is running
+- [x] README screenshot in docs/
+- [x] Sort by copies for sale (ascending = fewest first)
