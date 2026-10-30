@@ -172,9 +172,7 @@
 }
 
 .vinyl-label {
-  background:
-    radial-gradient(circle at 50% 22%, var(--background) 0 12%, transparent 13%),
-    var(--primary);
+  background: var(--primary);
 }
 
 .progress-sweep {
