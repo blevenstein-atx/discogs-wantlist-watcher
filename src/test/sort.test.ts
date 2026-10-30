@@ -41,4 +41,10 @@ describe("sortRows", () => {
     expect(sortRows(rows, "artist", "desc").map((r) => r.artist)).toEqual(["Zappa", "Abbott"]);
     expect(sortRows(rows, "artist", "asc").map((r) => r.artist)).toEqual(["Zappa", "Abbott"]);
   });
+
+  it("orders by copies for sale fewest first ascending, most first descending", () => {
+    const rows = [{ ...row("A", "a", 1), num_for_sale: 12 }, { ...row("B", "b", 1), num_for_sale: 1 }, { ...row("C", "c", 1), num_for_sale: 3 }];
+    expect(sortRows(rows, "copies").map((r) => r.num_for_sale)).toEqual([1, 3, 12]);
+    expect(sortRows(rows, "copies", "desc").map((r) => r.num_for_sale)).toEqual([12, 3, 1]);
+  });
 });

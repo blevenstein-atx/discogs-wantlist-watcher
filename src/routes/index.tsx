@@ -48,10 +48,18 @@ function Index() {
   const [dir, setDir] = useState<SortDirection>("asc");
 
   const [progress, setProgress] = useState<RunProgress>(() => progressOf(null));
+  // A refresh started elsewhere (or before a reload) that this tab is following.
+  const [watching, setWatching] = useState(false);
+  const active = running || watching;
+
+  useEffect(() => {
+    supabase.from("refresh_runs").select("id").eq("status", "running").limit(1).maybeSingle()
+      .then(({ data: run }) => { if (run) setWatching(true); });
+  }, []);
 
   // While a refresh is running, ask the backend how far it has got.
   useEffect(() => {
-    if (!running) return;
+    if (!active) return;
     let stop = false;
     const tick = async () => {
       const { data: run } = await supabase
@@ -61,12 +69,14 @@ function Index() {
         .order("started_at", { ascending: false })
         .limit(1)
         .maybeSingle();
-      if (!stop) { setProgress(progressOf(run)); setRetryAt(run?.retry_at ?? null); }
+      if (stop) return;
+      if (!run && watching && !running) { setWatching(false); qc.invalidateQueries({ queryKey: ["wantlist"] }); return; }
+      setProgress(progressOf(run)); setRetryAt(run?.retry_at ?? null);
     };
     tick();
     const id = setInterval(tick, 1500);
     return () => { stop = true; clearInterval(id); };
-  }, [running]);
+  }, [active, running, watching, qc]);
 
   const onRefresh = async () => {
     setRunning(true); setErr(null); setRetryAt(null); setProgress(progressOf(null));
@@ -100,9 +110,9 @@ function Index() {
           </p>
         </div>
         <div className="flex flex-col items-end gap-3">
-          <button onClick={onRefresh} disabled={running}
+          <button onClick={onRefresh} disabled={active}
             className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:opacity-60">
-            {running ? "Refreshing…" : "Refresh"}
+            {active ? "Refreshing…" : "Refresh"}
           </button>
           <div className="flex flex-col items-end gap-2 text-sm">
             <label className="flex items-center gap-2">
@@ -112,6 +122,7 @@ function Index() {
                 <option value="artist">Artist name</option>
                 <option value="title">Album title</option>
                 <option value="year">Release year</option>
+                <option value="copies">Copies for sale</option>
               </select>
             </label>
             <label className="flex items-center gap-2">
@@ -131,8 +142,8 @@ function Index() {
         </div>
       </header>
 
-      {running && <RefreshProgress progress={progress} retryAt={retryAt} />}
-      {!running && retryAt && <p className="mb-4 text-sm text-muted-foreground">Discogs cooldown until {fmt(retryAt)}. Please wait before refreshing again.</p>}
+      {active && <RefreshProgress progress={progress} retryAt={retryAt} />}
+      {!active && retryAt && <p className="mb-4 text-sm text-muted-foreground">Discogs cooldown until {fmt(retryAt)}. Please wait before refreshing again.</p>}
       {err && <p className="mb-4 rounded-md bg-destructive/10 p-3 text-sm text-destructive">{err}</p>}
       {isLoading ? <p className="text-muted-foreground">Loading…</p> : (
         <>
