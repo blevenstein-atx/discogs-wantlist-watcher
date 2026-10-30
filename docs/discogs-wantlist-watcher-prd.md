@@ -33,14 +33,16 @@ There is a single user (the owner). Visitors need no account — the wantlist st
 - A **"Changes only"** toggle filters the list down to just the items that changed since the last refresh.
 
 ### 3.2 Sorting
-- Sortable by **Artist name** (default), **Album title**, or **Release year**.
+- Sortable by **Artist name** (default), **Album title**, **Release year**, or **Copies for sale**.
 - Each field can be sorted **Ascending** (default) or **Descending** via an Order dropdown.
-- Sort rules: artist ascending with title tiebreak; title ascending with artist tiebreak; release year descending with nulls last and artist tiebreak (order reversed when descending).
+- Sort rules: artist ascending with title tiebreak; title ascending with artist tiebreak; release year descending with nulls last and artist tiebreak (order reversed when descending); copies for sale ascending puts the scarcest items (1–2 copies) first, tiebreak by artist then title.
 - Newly-available items stay pinned above everything else in every sort.
 
 ### 3.3 Refresh progress
 - A "Refresh" action re-checks the wantlist.
-- While refreshing, a progress panel shows a spinning record animation, "Checking N of M" text, and a progress bar (indeterminate sweep until the total item count is known).
+- While refreshing, a progress panel shows a spinning record animation (with shine streaks and a single center label), "Checking N of M" text, and a progress bar (indeterminate sweep until the total item count is known).
+- If the page is loaded or reloaded while a refresh is already running, the progress panel reconnects automatically and keeps showing live progress; results update when the run finishes.
+- During a Discogs cooldown the panel shows "Waiting for Discogs…" with a live countdown instead of a counting message.
 - Wording uses "newly available" (not "now available").
 
 ## 4. Data & Backend
@@ -70,7 +72,8 @@ There is a single user (the owner). Visitors need no account — the wantlist st
 
 - A visitor without an account sees the wantlist status page with available items, counts, and change sections.
 - Newly available items are badged and pinned at the top under any sort order.
-- Sorting by artist / title / year, ascending or descending, orders the list as specified.
+- Sorting by artist / title / year / copies for sale, ascending or descending, orders the list as specified.
 - Refreshing shows a live progress panel (record animation, "Checking N of M", progress bar), keeps conservative pacing, and displays a countdown during Discogs cooldowns rather than a misleading counting message.
+- Loading or reloading the page mid-refresh reconnects the progress panel and shows live progress without restarting the run.
 - Overlapping refreshes are blocked, all Discogs requests use the linked relay, and provider failures leave the previous results intact.
 - "Changes only" shows only items whose availability changed since the previous refresh.
