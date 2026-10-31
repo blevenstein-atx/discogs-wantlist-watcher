@@ -163,20 +163,21 @@
 }
 
 .cd-disc {
+  --disc-silver: oklch(0.81 0.012 95);
+  --disc-highlight: oklch(0.96 0.008 95);
+  --disc-shadow: oklch(0.63 0.015 95);
+  --disc-mint: oklch(0.85 0.07 160 / 65%);
+  --disc-lilac: oklch(0.82 0.05 300 / 55%);
+  --disc-gold: oklch(0.88 0.065 95 / 60%);
+  --disc-hub: oklch(0.9 0.008 290);
   border-radius: 9999px;
   background:
-    conic-gradient(from 0deg,
-      color-mix(in srgb, var(--chart-1) 24%, transparent),
-      transparent 10% 22%,
-      color-mix(in srgb, var(--chart-2) 22%, transparent) 32%,
-      transparent 42% 54%,
-      color-mix(in srgb, var(--chart-4) 24%, transparent) 64%,
-      transparent 72% 82%,
-      color-mix(in srgb, var(--chart-5) 22%, transparent) 90%,
-      transparent),
-    repeating-radial-gradient(circle at 50% 50%, transparent 0 1px, color-mix(in srgb, var(--muted-foreground) 16%, transparent) 1px 2px),
-    radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--muted-foreground) 14%, var(--card)) 0 100%);
-  box-shadow: 0 8px 20px -10px color-mix(in srgb, var(--foreground) 60%, transparent);
+    radial-gradient(circle, transparent 0 9%, var(--disc-hub) 10% 20%, var(--disc-shadow) 21% 25%, transparent 26%),
+    radial-gradient(ellipse at 18% 26%, var(--disc-mint), transparent 58%),
+    radial-gradient(ellipse at 78% 20%, var(--disc-lilac), transparent 52%),
+    radial-gradient(ellipse at 80% 75%, var(--disc-gold), transparent 58%),
+    conic-gradient(from 25deg, var(--disc-silver), var(--disc-highlight) 22%, var(--disc-silver) 42%, var(--disc-shadow) 60%, var(--disc-highlight) 78%, var(--disc-silver));
+  box-shadow: inset 0 0 0 1px var(--disc-shadow), inset 0 0 0 2px color-mix(in srgb, var(--disc-highlight) 65%, transparent), 0 8px 20px -10px color-mix(in srgb, var(--foreground) 60%, transparent);
   animation: disc-spin 3.2s linear infinite;
 }
 
