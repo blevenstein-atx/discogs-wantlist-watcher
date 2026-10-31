@@ -11,3 +11,4 @@
 - [x] Reconnect progress panel on page load if a refresh is running
 - [x] README screenshot in docs/
 - [x] Sort by copies for sale (ascending = fewest first)
+- [ ] Cancel refresh safely, preserve the last snapshot, and verify cancellation through the app
