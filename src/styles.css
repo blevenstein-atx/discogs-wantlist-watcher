@@ -166,16 +166,14 @@
   border-radius: 9999px;
   background:
     conic-gradient(from 0deg,
-      color-mix(in srgb, var(--chart-1) 32%, transparent) 0 8%,
-      transparent 8% 20%,
-      color-mix(in srgb, var(--chart-2) 30%, transparent) 20% 28%,
-      transparent 28% 42%,
-      color-mix(in srgb, var(--chart-4) 34%, transparent) 42% 50%,
-      transparent 50% 62%,
-      color-mix(in srgb, var(--chart-5) 30%, transparent) 62% 70%,
-      transparent 70% 80%,
-      color-mix(in srgb, var(--chart-2) 26%, transparent) 80% 88%,
-      transparent 88%),
+      color-mix(in srgb, var(--chart-1) 24%, transparent),
+      transparent 10% 22%,
+      color-mix(in srgb, var(--chart-2) 22%, transparent) 32%,
+      transparent 42% 54%,
+      color-mix(in srgb, var(--chart-4) 24%, transparent) 64%,
+      transparent 72% 82%,
+      color-mix(in srgb, var(--chart-5) 22%, transparent) 90%,
+      transparent),
     repeating-radial-gradient(circle at 50% 50%, transparent 0 1px, color-mix(in srgb, var(--muted-foreground) 16%, transparent) 1px 2px),
     radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--muted-foreground) 14%, var(--card)) 0 100%);
   box-shadow: 0 8px 20px -10px color-mix(in srgb, var(--foreground) 60%, transparent);
