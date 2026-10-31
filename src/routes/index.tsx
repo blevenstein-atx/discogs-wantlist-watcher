@@ -176,8 +176,8 @@ function RefreshProgress({ progress, retryAt }: { progress: RunProgress; retryAt
   const seconds = now ? cooldownOf(retryAt, now) : null;
   return (
     <div className="mb-8 flex items-center gap-5 rounded-lg border bg-card p-5" role="status" aria-live="polite">
-      <div className="vinyl relative h-20 w-20 shrink-0">
-        <div className="vinyl-label absolute left-1/2 top-1/2 h-7 w-7 -translate-x-1/2 -translate-y-1/2 rounded-full" />
+      <div className="cd-disc relative h-20 w-20 shrink-0">
+        <div className="cd-hub absolute left-1/2 top-1/2 h-6 w-6 -translate-x-1/2 -translate-y-1/2 rounded-full" />
         <div className="absolute left-1/2 top-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-background" />
       </div>
       <div className="min-w-0 flex-1">

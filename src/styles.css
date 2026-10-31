@@ -144,9 +144,10 @@
   }
 }
 
-/* Refresh indicator: a spinning record with grooves, a coloured centre label,
-   and an indeterminate bar used while the wantlist size is still unknown. */
-@keyframes record-spin {
+/* Refresh indicator: a spinning CD — a silver disc with an iridescent sheen,
+   a clear hub ring and centre hole — plus an indeterminate bar used while
+   the wantlist size is still unknown. */
+@keyframes disc-spin {
   to {
     transform: rotate(360deg);
   }
@@ -161,18 +162,27 @@
   }
 }
 
-.vinyl {
+.cd-disc {
   border-radius: 9999px;
   background:
-    conic-gradient(from 0deg, transparent 0 10%, color-mix(in srgb, var(--background) 35%, transparent) 14%, transparent 18% 60%, color-mix(in srgb, var(--background) 25%, transparent) 64%, transparent 68%),
-    repeating-radial-gradient(circle at 50% 50%, transparent 0 1px, color-mix(in srgb, var(--muted-foreground) 26%, transparent) 1px 2px),
-    radial-gradient(circle at 50% 50%, var(--foreground) 0 36%, color-mix(in srgb, var(--foreground) 88%, var(--muted)) 36% 100%);
+    conic-gradient(from 0deg,
+      color-mix(in srgb, var(--chart-1) 24%, transparent),
+      transparent 10% 22%,
+      color-mix(in srgb, var(--chart-2) 22%, transparent) 32%,
+      transparent 42% 54%,
+      color-mix(in srgb, var(--chart-4) 24%, transparent) 64%,
+      transparent 72% 82%,
+      color-mix(in srgb, var(--chart-5) 22%, transparent) 90%,
+      transparent),
+    repeating-radial-gradient(circle at 50% 50%, transparent 0 1px, color-mix(in srgb, var(--muted-foreground) 16%, transparent) 1px 2px),
+    radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--muted-foreground) 14%, var(--card)) 0 100%);
   box-shadow: 0 8px 20px -10px color-mix(in srgb, var(--foreground) 60%, transparent);
-  animation: record-spin 3.2s linear infinite;
+  animation: disc-spin 3.2s linear infinite;
 }
 
-.vinyl-label {
-  background: var(--primary);
+.cd-hub {
+  background: var(--card);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--border) 80%, transparent);
 }
 
 .progress-sweep {
@@ -191,7 +201,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .vinyl {
+  .cd-disc {
     animation: none;
   }
   .progress-sweep::after {
