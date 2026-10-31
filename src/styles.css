@@ -203,7 +203,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .vinyl {
+  .cd-disc {
     animation: none;
   }
   .progress-sweep::after {
