@@ -8,6 +8,8 @@ export class DiscogsRateLimitError extends Error {
   }
 }
 
+export class RefreshCancelledError extends Error {}
+
 export function retryDelay(headers: Headers, attempt: number, now = Date.now()) {
   const value = headers.get("Retry-After");
   const seconds = value === null ? NaN : Number(value);
@@ -25,14 +27,23 @@ export function discogsRequester(options: {
   now?: () => number;
   onBackoff: (retryAt: string, delay: number) => Promise<void>;
   onReady: () => Promise<void>;
+  checkCancelled?: () => Promise<void>;
 }) {
   const fetcher = options.fetcher ?? fetch;
   const wait = options.wait ?? ((ms) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
   const now = options.now ?? Date.now;
+  const pause = async (ms: number) => {
+    if (!options.checkCancelled) { await wait(ms); return; }
+    for (let remaining = ms; remaining > 0; remaining -= 1000) {
+      await options.checkCancelled();
+      await wait(Math.min(1000, remaining));
+    }
+    await options.checkCancelled();
+  };
   return async (url: string): Promise<Response> => {
     // Pace every request, including the first page and retry attempts.
     for (let attempt = 0; ; attempt++) {
-      await wait(DISCOGS_PACING_MS);
+      await pause(DISCOGS_PACING_MS);
       const response = await fetcher(url, { headers: options.headers, signal: AbortSignal.timeout(30_000) });
       if (response.status !== 429) {
         await options.onReady();
@@ -43,7 +54,7 @@ export function discogsRequester(options: {
       await options.onBackoff(retryAt, delay);
       await response.body?.cancel();
       if (attempt >= MAX_RETRIES || delay > MAX_WAIT_MS) throw new DiscogsRateLimitError(retryAt);
-      await wait(delay);
+      await pause(delay);
     }
   };
 }

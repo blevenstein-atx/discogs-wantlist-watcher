@@ -16,4 +16,5 @@
 - Discogs calls use the tested request helper for pacing and bounded 429 backoff; a service-only database RPC acquires a shared refresh lease so separate tabs and workers cannot overlap. Stage fetched rows until all requests succeed to preserve the previous snapshot on provider failures.
 - All Discogs requests, including pagination and retries, go through the linked Discogs connector gateway with server-only connection credentials; never fall back to direct provider requests, so the alternate outbound path remains consistent.
 - Refresh progress prioritizes persisted Discogs cooldown state over reading/checking labels, with countdown math in the tested browser-safe progress module.
+- Cancellation is a persisted request on a specific run; the worker checks it during pacing and cooldown waits, and a service-only atomic commit serializes snapshot replacement with cancellation so cancelled runs never save partial results or release their lease before stopping.
 
