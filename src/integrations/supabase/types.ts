@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       refresh_runs: {
         Row: {
+          cancel_requested_at: string | null
           checked: number
           completed_at: string | null
           error_count: number
@@ -27,6 +28,7 @@ export type Database = {
           total: number | null
         }
         Insert: {
+          cancel_requested_at?: string | null
           checked?: number
           completed_at?: string | null
           error_count?: number
@@ -38,6 +40,7 @@ export type Database = {
           total?: number | null
         }
         Update: {
+          cancel_requested_at?: string | null
           checked?: number
           completed_at?: string | null
           error_count?: number
@@ -101,6 +104,14 @@ export type Database = {
           retry_after: string
           run_id: string
         }[]
+      }
+      commit_wantlist_refresh: {
+        Args: { p_rows: Json; p_run_id: string }
+        Returns: string
+      }
+      request_wantlist_cancellation: {
+        Args: { p_run_id: string }
+        Returns: string
       }
     }
     Enums: {

@@ -1,6 +1,17 @@
 import { createServerFn } from "@tanstack/react-start";
-import { discogsRequester, DiscogsRateLimitError } from "./discogs-request";
+import { discogsRequester, DiscogsRateLimitError, RefreshCancelledError } from "./discogs-request";
 import { discogsGatewayFetcher } from "./discogs-gateway";
+import { z } from "zod";
+
+export const cancelWantlistRefresh = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) => z.object({ runId: z.string().uuid() }).parse(input))
+  .handler(async ({ data }) => {
+    // Refresh is intentionally public; cancellation is limited to a specific running run.
+    const { supabaseAdmin: db } = await import("@/integrations/supabase/client.server");
+    const { data: outcome, error } = await db.rpc("request_wantlist_cancellation", { p_run_id: data.runId });
+    if (error) throw new Error("Could not cancel refresh. Please try again.");
+    return { requested: outcome === "requested" };
+  });
 
 export function computeChangeStatus(prev: number | null | undefined, current: number) {
   if (prev === null || prev === undefined) return "unchanged";
@@ -28,9 +39,15 @@ export const refreshWantlist = createServerFn({ method: "POST" }).handler(async 
     const { error } = await db.from("refresh_runs").update(values).eq("id", runId).eq("status", "running");
     if (error) throw new Error("Could not save refresh progress");
   };
+  const checkCancelled = async () => {
+    const { data: run, error } = await db.from("refresh_runs").select("status, cancel_requested_at, lease_expires_at").eq("id", runId).single();
+    if (error) throw new Error("Could not check refresh status");
+    if (run.status !== "running" || run.cancel_requested_at || (run.lease_expires_at && Date.parse(run.lease_expires_at) <= Date.now())) throw new RefreshCancelledError();
+  };
   const request = discogsRequester({
     headers,
     fetcher: discogsGatewayFetcher({ apiKey, connectionKey }),
+    checkCancelled,
     onBackoff: async (retryAt, delay) => updateRun({ retry_at: retryAt, lease_expires_at: new Date(Date.now() + delay + 120_000).toISOString() }),
     onReady: async () => updateRun({ retry_at: null, lease_expires_at: new Date(Date.now() + 120_000).toISOString() }),
   });
@@ -79,22 +96,22 @@ export const refreshWantlist = createServerFn({ method: "POST" }).handler(async 
         });
       await updateRun({ checked: i + 1 });
     }
-    // Only replace the snapshot after every Discogs request succeeds.
-    if (nextRows.length) {
-      const { error } = await db.from("wantlist_status").upsert(nextRows);
-      if (error) throw new Error("Could not save refreshed wantlist");
-    }
-
-    const keep = new Set(wants.map((w) => Number(w.id)));
-    const stale = [...prevMap.keys()].filter((id) => !keep.has(id));
-    if (stale.length) {
-      const { error } = await db.from("wantlist_status").delete().in("release_id", stale);
-      if (error) throw new Error("Could not update removed wants");
-    }
-
-    await updateRun({ status: "completed", completed_at: new Date().toISOString(), error_count: errorCount, retry_at: null });
+    // Serialize commit with cancellation so no partial or cancelled snapshot is saved.
+    const { data: outcome, error } = await db.rpc("commit_wantlist_refresh", { p_run_id: runId, p_rows: nextRows });
+    if (error) throw new Error("Could not save refreshed wantlist");
+    if (outcome !== "completed") throw new RefreshCancelledError();
     return { ok: true, total: wants.length, errors: errorCount };
   } catch (e) {
+    let cancelled = e instanceof RefreshCancelledError;
+    if (!cancelled) {
+      const { data: run } = await db.from("refresh_runs").select("cancel_requested_at").eq("id", runId).single();
+      cancelled = Boolean(run?.cancel_requested_at);
+    }
+    if (cancelled) {
+      // Keep any provider cooldown; release the lease only after processing stops.
+      await updateRun({ status: "cancelled", completed_at: new Date().toISOString(), lease_expires_at: new Date().toISOString() });
+      return { ok: false, cancelled: true, message: "Refresh cancelled. Your previous results have been kept.", retryAt: null };
+    }
     await updateRun({ status: "failed", completed_at: new Date().toISOString(), error_count: errorCount + 1 });
     return { ok: false, message: e instanceof DiscogsRateLimitError ? e.message : "Refresh could not complete. Your previous results have been kept; please try again later.", retryAt: e instanceof DiscogsRateLimitError ? e.retryAt : null };
   }

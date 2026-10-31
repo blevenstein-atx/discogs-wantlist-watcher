@@ -3,7 +3,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { refreshWantlist } from "@/lib/wantlist.functions";
+import { refreshWantlist, cancelWantlistRefresh } from "@/lib/wantlist.functions";
+import { Button } from "@/components/ui/button";
+import { Square } from "lucide-react";
 import { cooldownOf, progressOf, type RunProgress } from "@/lib/wantlist-progress";
 import { sortRows, type SortDirection, type SortKey } from "@/lib/wantlist-sort";
 
@@ -40,6 +42,10 @@ function Index() {
   const qc = useQueryClient();
   const { data, isLoading } = useQuery({ queryKey: ["wantlist"], queryFn: load });
   const refresh = useServerFn(refreshWantlist);
+  const cancel = useServerFn(cancelWantlistRefresh);
+  const [runId, setRunId] = useState<string | null>(null);
+  const [cancelling, setCancelling] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [retryAt, setRetryAt] = useState<string | null>(null);
@@ -64,13 +70,15 @@ function Index() {
     const tick = async () => {
       const { data: run } = await supabase
         .from("refresh_runs")
-        .select("total, checked, retry_at")
+        .select("id, total, checked, retry_at, cancel_requested_at")
         .eq("status", "running")
         .order("started_at", { ascending: false })
         .limit(1)
         .maybeSingle();
       if (stop) return;
-      if (!run && watching && !running) { setWatching(false); qc.invalidateQueries({ queryKey: ["wantlist"] }); return; }
+      setRunId(run?.id ?? null);
+      if (run?.cancel_requested_at) setCancelling(true);
+      if (!run && watching && !running) { setWatching(false); setCancelling(false); qc.invalidateQueries({ queryKey: ["wantlist"] }); return; }
       setProgress(progressOf(run)); setRetryAt(run?.retry_at ?? null);
     };
     tick();
@@ -79,13 +87,25 @@ function Index() {
   }, [active, running, watching, qc]);
 
   const onRefresh = async () => {
+    setNotice(null); setCancelling(false); setRunId(null);
     setRunning(true); setErr(null); setRetryAt(null); setProgress(progressOf(null));
     try {
       const result = await refresh();
-      if (!result.ok) { setErr(result.message); setRetryAt(result.retryAt); }
+      if (!result.ok) {
+        if ("cancelled" in result && result.cancelled) setNotice(result.message);
+        else setErr(result.message);
+        setRetryAt(result.retryAt);
+      }
       else setRetryAt(null);
     } catch (e) { setErr(e instanceof Error ? e.message : "Refresh failed"); }
-    finally { setRunning(false); qc.invalidateQueries({ queryKey: ["wantlist"] }); }
+    finally { setRunning(false); setCancelling(false); setRunId(null); qc.invalidateQueries({ queryKey: ["wantlist"] }); }
+  };
+
+  const onCancel = async () => {
+    if (!runId) return;
+    setCancelling(true); setErr(null);
+    try { await cancel({ data: { runId } }); }
+    catch (e) { setCancelling(false); setErr(e instanceof Error ? e.message : "Could not cancel refresh"); }
   };
 
   const rows = data?.rows ?? [];
@@ -110,10 +130,12 @@ function Index() {
           </p>
         </div>
         <div className="flex flex-col items-end gap-3">
-          <button onClick={onRefresh} disabled={active}
-            className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:opacity-60">
+          <Button onClick={onRefresh} disabled={active}>
             {active ? "Refreshing…" : "Refresh"}
-          </button>
+          </Button>
+          {active && <Button variant="outline" onClick={onCancel} disabled={!runId || cancelling}>
+            <Square aria-hidden="true" />{cancelling ? "Cancelling…" : "Cancel refresh"}
+          </Button>}
           <div className="flex flex-col items-end gap-2 text-sm">
             <label className="flex items-center gap-2">
               Sort
@@ -145,6 +167,7 @@ function Index() {
       {active && <RefreshProgress progress={progress} retryAt={retryAt} />}
       {!active && retryAt && <p className="mb-4 text-sm text-muted-foreground">Discogs cooldown until {fmt(retryAt)}. Please wait before refreshing again.</p>}
       {err && <p className="mb-4 rounded-md bg-destructive/10 p-3 text-sm text-destructive">{err}</p>}
+      {notice && <p role="status" className="mb-4 text-sm text-muted-foreground">{notice}</p>}
       {isLoading ? <p className="text-muted-foreground">Loading…</p> : (
         <>
           {main.length === 0 ? (
