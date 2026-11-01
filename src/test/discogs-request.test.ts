@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { discogsRequester, DiscogsRateLimitError, retryDelay } from "@/lib/discogs-request";
+import { discogsRequester, DiscogsRateLimitError, RefreshCancelledError, retryDelay } from "@/lib/discogs-request";
 
 function setup(responses: Response[]) {
   const fetcher = vi.fn(async () => responses.shift() ?? new Response("", { status: 500 }));
@@ -10,6 +10,29 @@ function setup(responses: Response[]) {
 }
 
 describe("Discogs request safeguards", () => {
+  it("stops before sending a request when cancellation is requested", async () => {
+    const fetcher = vi.fn(async () => new Response("{}"));
+    const request = discogsRequester({ headers: {}, fetcher, wait: async () => {}, onBackoff: async () => {}, onReady: async () => {}, checkCancelled: async () => { throw new RefreshCancelledError(); } });
+    await expect(request("https://api.discogs.com/wants")).rejects.toBeInstanceOf(RefreshCancelledError);
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+  it("stops during a cooldown without sending another Discogs request", async () => {
+    let cancelled = false;
+    const fetcher = vi.fn(async () => new Response("", { status: 429 }));
+    const wait = vi.fn(async () => { if (fetcher.mock.calls.length) cancelled = true; });
+    const request = discogsRequester({ headers: {}, fetcher, wait, onBackoff: async () => {}, onReady: async () => {}, checkCancelled: async () => { if (cancelled) throw new RefreshCancelledError(); } });
+    await expect(request("https://api.discogs.com/wants")).rejects.toBeInstanceOf(RefreshCancelledError);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(wait.mock.calls.length).toBe(2);
+  });
+  it("allows an in-flight request to finish but sends no further requests after cancellation", async () => {
+    let cancelled = false;
+    const fetcher = vi.fn(async () => { cancelled = true; return new Response("{}"); });
+    const request = discogsRequester({ headers: {}, fetcher, wait: async () => {}, onBackoff: async () => {}, onReady: async () => {}, checkCancelled: async () => { if (cancelled) throw new RefreshCancelledError(); } });
+    expect((await request("https://api.discogs.com/first")).status).toBe(200);
+    await expect(request("https://api.discogs.com/second")).rejects.toBeInstanceOf(RefreshCancelledError);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
   it("keeps every request at one second pacing", async () => {
     const io = setup([new Response("{}"), new Response("{}")]);
     await io.request("https://api.discogs.com/first");
