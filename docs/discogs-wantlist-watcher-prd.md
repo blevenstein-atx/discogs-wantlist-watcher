@@ -43,12 +43,13 @@ There is a single user (the owner). Visitors need no account — the wantlist st
 - While refreshing, a progress panel shows a spinning CD animation (silver disc with an iridescent sheen, clear hub ring and centre hole), "Checking N of M" text, and a progress bar (indeterminate sweep until the total item count is known).
 - If the page is loaded or reloaded while a refresh is already running, the progress panel reconnects automatically and keeps showing live progress; results update when the run finishes.
 - During a Discogs cooldown the panel shows "Waiting for Discogs…" with a live countdown instead of a counting message.
+- A **Cancel refresh** button appears while a run is active. Cancelling sets a persisted cancellation flag on the run; the worker stops before its next check (including during pacing or cooldown waits) and the button shows "Cancelling…". The run is recorded as `cancelled` and the previous complete results are kept — no partial snapshot is saved.
 - Wording uses "newly available" (not "now available").
 
 ## 4. Data & Backend
 
 - **`wantlist_status`** — one row per want: release id, artist, title, format, year, thumbnail, current for-sale count, previous for-sale count, change status (`unchanged` / `now_available` / `no_longer_available`), and refreshed-at timestamp.
-- **`refresh_runs`** — audit of each refresh: started/completed timestamps, status, item total, items checked so far (drives the progress panel), and error count.
+- **`refresh_runs`** — audit of each refresh: started/completed timestamps, status (`running` / `completed` / `failed` / `cancelled`), item total, items checked so far (drives the progress panel), error count, a lease expiry timestamp for the shared refresh lock, a cooldown retry-at timestamp, and a cancellation-request timestamp.
 - Data is stored in the project's backend (Lovable Cloud). Anonymous and authenticated users have read access; the wantlist being public is intentional.
 - Discogs connection credentials and the username are kept private and are never exposed on the page.
 
@@ -60,6 +61,7 @@ There is a single user (the owner). Visitors need no account — the wantlist st
 - All outbound Discogs requests, including pagination and retries, use Lovable's linked Discogs connection relay rather than direct requests from the web host.
 - A shared refresh lock prevents overlapping checks. Rate-limit responses trigger bounded retries and a visible cooldown countdown; future provider limits remain possible.
 - Fetched results are staged until every request succeeds, so a failed refresh preserves the previous snapshot. With relay overhead or cooldowns, a full refresh can take a few minutes.
+- **Cancellation:** the worker checks a persisted cancellation flag on the run between requests (including during pacing and cooldown waits) and stops without saving anything. Committing the staged snapshot happens in a single backend-side database call that is serialized with cancellation, so a cancelled run never saves partial results or releases the lock before it stops. Already-in-flight requests may still complete, and the lock is released when the run ends.
 
 ## 6. Constraints & Decisions
 
@@ -77,3 +79,4 @@ There is a single user (the owner). Visitors need no account — the wantlist st
 - Loading or reloading the page mid-refresh reconnects the progress panel and shows live progress without restarting the run.
 - Overlapping refreshes are blocked, all Discogs requests use the linked relay, and provider failures leave the previous results intact.
 - "Changes only" shows only items whose availability changed since the previous refresh.
+- Cancelling an in-progress refresh stops further checks, records the run as cancelled, and leaves the previous complete results intact — never a partial snapshot.

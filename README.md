@@ -12,7 +12,7 @@ A single-page web app that shows which items in a Discogs wantlist currently hav
 - **Change tracking**: items that just became available are pinned at the top with a "Newly available" badge; items that dropped to zero copies are listed in a collapsible "No longer available" section.
 - **Changes only** toggle to filter down to just what changed since the last refresh.
 - **Sorting**: by Artist name (default), Album title, Release year, or Copies for sale, each ascending or descending. Newly available items stay pinned regardless of sort.
-- **Refresh progress**: refreshing re-checks the full wantlist at ~1 item per second (Discogs' rate limit), with a spinning-CD progress panel showing live counts.
+- **Refresh progress**: refreshing re-checks the full wantlist at ~1 item per second (Discogs' rate limit), with a spinning-CD progress panel showing live counts. A **Cancel refresh** button stops an in-progress run early; your previous results are always kept.
 
 No login is needed to view the page — the wantlist status is intentionally public. Read-only: the app never edits the wantlist.
 
@@ -24,7 +24,8 @@ No login is needed to view the page — the wantlist status is intentionally pub
 
 - A backend (Lovable Cloud) stores the current status of each want (`wantlist_status`) and an audit of each refresh run (`refresh_runs`), which also drives the progress panel.
 - On refresh, the app paginates the wantlist, then checks the marketplace listing count for each item one at a time, pacing requests at ~1/second. Requests go through Lovable's linked Discogs connection relay; a full refresh can take a few minutes.
-- A shared refresh lock prevents overlapping checks. Discogs rate limits trigger automatic cooldowns and bounded retries, with a countdown on the page; failed checks preserve the previous results.
+- A shared refresh lock prevents overlapping checks. Discogs rate limits trigger automatic cooldowns and bounded retries, with a countdown on the page; failed or cancelled checks preserve the previous results.
+- Results from a refresh are saved in one atomic step at the end, so a cancelled run never leaves partial data behind.
 - Discogs connection credentials are kept private and are never exposed on the page.
 
 ## Build with Lovable
