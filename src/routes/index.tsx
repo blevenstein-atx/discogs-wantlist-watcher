@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { refreshWantlist, cancelWantlistRefresh } from "@/lib/wantlist.functions";
 import { Button } from "@/components/ui/button";
-import { Square } from "lucide-react";
+import { X } from "lucide-react";
 import { cooldownOf, progressOf, type RunProgress } from "@/lib/wantlist-progress";
 import { sortRows, type SortDirection, type SortKey } from "@/lib/wantlist-sort";
 
@@ -134,7 +134,7 @@ function Index() {
             {active ? "Refreshing…" : "Refresh"}
           </Button>
           {active && <Button variant="outline" onClick={onCancel} disabled={!runId || cancelling}>
-            <Square aria-hidden="true" />{cancelling ? "Cancelling…" : "Cancel refresh"}
+            <X aria-hidden="true" />{cancelling ? "Cancelling…" : "Cancel refresh"}
           </Button>}
           <div className="flex flex-col items-end gap-2 text-sm">
             <label className="flex items-center gap-2">
